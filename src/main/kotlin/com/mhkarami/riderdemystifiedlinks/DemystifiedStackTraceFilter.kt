@@ -1,13 +1,3 @@
-/**
- * Rider/IntelliJ Platform plugin filter that recognizes ".cs:line N" fragments
- * inside Ben.Demystifier-formatted stack traces (which the built-in Stack Trace
- * Explorer does not parse) and turns them into clickable navigation links.
- *
- * Module: IntelliJ Platform Plugin SDK (Kotlin/JVM), NOT the ReSharper .NET SDK.
- * Extension point: com.intellij.consoleFilterProvider
- * Docs: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html
- */
-
 package com.mhkarami.riderdemystifiedlinks
 
 import com.intellij.execution.filters.ConsoleFilterProvider
@@ -17,12 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 
-/**
- * Matches fragments like:
- *   in D:/ag/WCA9/_w/757/s/src/Fund/Source/src/Infrastructure/Extensions/FlurlResponseExtensions.cs:line 24
- * Only the file name + line number are used; the absolute CI path is ignored,
- * because it will not exist on the local machine.
- */
 private val STACK_FRAME_FILE_LINE_REGEX =
     Regex("""in\s+[^\s:]*?([A-Za-z0-9_.\-]+\.(?:cs|vb|fs)):line\s+(\d+)""")
 

@@ -1,32 +1,24 @@
 /**
  * Watches the system clipboard and automatically triggers Rider's built-in
- * "Analyze Stack Trace or Thread Dump" action (internal action id: "Unscramble")
+ * "Analyze Stack Trace or Thread Dump" action (action id: "Unscramble" --
+ * confirmed via IntelliJ Platform source: ActionsBundle.properties and
+ * IdeErrorsDialog.kt both reference ActionManager.getInstance().getAction("Unscramble"))
  * whenever the clipboard content looks like an exception stack trace.
  *
- * NOTE: Rider does not document or ship this behavior itself (unlike IntelliJ
- * IDEA's "Automatically detect..." checkbox) -- the Stacktrace window must
- * normally be opened manually via Tools | Analyze Stack Trace or Thread Dump.
- * This class replicates that manual trigger automatically.
- *
- * Heuristic: intentionally loose (same spirit as IntelliJ IDEA's own
- * detector) -- looks for the word "Exception" together with at least one
- * line that starts with "at ". This deliberately does NOT require the
- * strict CLR grammar, so Ben.Demystifier-formatted traces still match, since
- * the actual frame parsing inside the Stacktrace window already understands
- * that format natively (confirmed by manual testing).
- *
- * Trade-off: any copied text that merely contains "Exception" and an
- * indented "at " line (e.g. copied from Stack Overflow, chat, documentation)
- * will also trigger the popup. Tighten STACK_TRACE_HEURISTIC below if this
- * turns out to be too aggressive in daily use.
+ * Rider does not ship this "auto-detect on clipboard copy" behavior itself
+ * (that specific checkbox lives only in the Java-plugin's UnscrambleDialog,
+ * per java/openapi/resources/messages/JavaBundle.properties:
+ * "unscramble.detect.analyze.threaddump.from.clipboard.item" -- a module
+ * Rider does not bundle). This class replicates the same idea at the
+ * platform level, independent of the Java plugin.
  */
 
 package com.mhkarami.riderdemystifiedlinks
 
 import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
@@ -62,13 +54,18 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
     private fun looksLikeStackTrace(text: String): Boolean =
         text.contains("Exception") && STACK_TRACE_HEURISTIC.containsMatchIn(text)
 
+    /**
+     * Uses the platform-recommended ActionUtil.invokeAction helper instead of
+     * calling action.actionPerformed(...) directly. invokeAction runs the
+     * action's update() check first (so its enabled/visible state is
+     * evaluated properly) and then performs it on the EDT in a write-safe
+     * context -- calling actionPerformed directly bypasses that and can
+     * silently no-op for some actions.
+     */
     private fun triggerAnalyzeStackTrace() {
         val action = ActionManager.getInstance().getAction(ANALYZE_STACK_TRACE_ACTION_ID) ?: return
-        val dataContext = DataContext { dataId ->
-            if (PlatformDataKeys.PROJECT.`is`(dataId)) project else null
-        }
-        val event = AnActionEvent.createFromAnAction(action, null, "ClipboardStackTraceWatcher", dataContext)
-        action.actionPerformed(event)
+        val dataContext = SimpleDataContext.getProjectContext(project)
+        ActionUtil.invokeAction(action, dataContext, ActionPlaces.UNKNOWN, null, null)
     }
 }
 

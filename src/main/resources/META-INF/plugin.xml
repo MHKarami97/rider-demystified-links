@@ -18,29 +18,32 @@
         clickable in Rider's Run/Debug/Terminal console, even when the
         surrounding method signature does not match the built-in Stack Trace
         Explorer grammar.</p>
-        <p>Also watches the clipboard and automatically opens Rider's
-        Stacktrace window (Tools | Analyze Stack Trace or Thread Dump) as
-        soon as something that looks like an exception stack trace is
-        copied -- Rider does not do this on its own.</p>
+        <p>Also watches the clipboard and automatically triggers Rider's
+        built-in "Analyze Stack Trace or Thread Dump" action (id
+        <code>Unscramble</code>) as soon as something that looks like an
+        exception stack trace is copied -- Rider does not do this on its own.</p>
     ]]></description>
 
     <change-notes><![CDATA[
-        <p><b>1.1.0</b></p>
+        <p><b>1.2.0</b></p>
         <ul>
-            <li>New: automatically opens the Stacktrace window when a stack
-            trace is detected on the clipboard, mirroring the manual
-            Tools | Analyze Stack Trace or Thread Dump action.</li>
-            <li>Plugin now stays compatible with future Rider versions
-            (no explicit untilBuild upper bound).</li>
+            <li>Fix: clipboard-triggered auto-open now uses
+            <code>ActionUtil.invokeAction</code> (the platform-recommended way
+            to programmatically fire an action, including its update/enable
+            check) instead of calling <code>actionPerformed</code> directly,
+            which could silently no-op.</li>
+            <li>Confirmed via IntelliJ Platform source that the action id
+            for "Analyze Stack Trace or Thread Dump" is <code>Unscramble</code>
+            on all JetBrains IDEs, including Rider.</li>
         </ul>
+        <p><b>1.1.1</b></p>
+        <ul><li>Fix: corrected interface name to
+        <code>CopyPasteManager.ContentChangedListener</code>.</li></ul>
         <p><b>1.0.0</b></p>
-        <ul>
-            <li>Initial release: recognizes .cs/.vb/.fs "in file:line N" fragments
-            inside demystified stack traces printed to Run/Debug/Terminal consoles.</li>
-        </ul>
+        <ul><li>Initial release: clickable file:line links for demystified
+        stack traces in Run/Debug/Terminal consoles.</li></ul>
     ]]></change-notes>
 
-    <!-- Rider (and any IntelliJ Platform IDE) as the host -->
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">

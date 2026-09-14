@@ -13,31 +13,19 @@ repositories {
     mavenCentral()
 }
 
-// See https://github.com/JetBrains/gradle-intellij-plugin
-// NOTE: Gradle IntelliJ Plugin 1.x prints a warning when building against
-// IntelliJ Platform 2024.2+ ("242+"), recommending a migration to the
-// IntelliJ Platform Gradle Plugin 2.x. This is advisory only and does not
-// fail the build; migrate later if you hit an actual incompatibility.
 intellij {
-    // platformType = RD -> builds/tests against Rider itself instead of IntelliJ IDEA.
-    // Requires Rider to be installed locally, or it will be downloaded automatically.
     type.set(providers.gradleProperty("platformType"))
     version.set(providers.gradleProperty("platformVersion"))
-
     plugins.set(listOf())
 }
 
 tasks {
     withType<KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "17"
-        }
+        kotlinOptions { jvmTarget = "17" }
     }
 
     patchPluginXml {
         sinceBuild.set(providers.gradleProperty("pluginSinceBuild"))
-        // Left unset intentionally: keeps the plugin compatible with future
-        // Rider versions since no internal/unstable APIs are used.
         untilBuild.set(provider { null })
     }
 
