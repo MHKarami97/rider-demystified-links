@@ -2,6 +2,8 @@ package com.mhkarami.riderdemystifiedlinks
 
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
@@ -9,20 +11,23 @@ import com.intellij.openapi.application.ApplicationActivationListener
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFrame
-import com.intellij.util.messages.MessageBusConnection
-import java.awt.KeyboardFocusManager
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.FlavorListener
 import java.awt.datatransfer.Transferable
 import java.util.concurrent.atomic.AtomicBoolean
 
-private val STACK_TRACE_HEURISTIC = Regex(
-    """(?im)^\s*(?:[\w.$+<>]+(?:Exception|Error)(?::|\s)|at\s+)"""
+private const val ANALYZE_STACK_TRACE_ACTION_ID = "Unscramble"
+private const val CURRENT_STACK_TRACE_DATA_KEY_NAME = "current_stack_trace_key"
+private const val MAX_CLIPBOARD_TEXT_LENGTH = 1_000_000
+
+private val exceptionHeaderPattern = Regex(
+    """(?im)^\s*(?:[\w.$+<>`]+(?:Exception|Error)(?::|\s)|[\w.$+<>`]+:\s)"""
 )
 
-private val STACK_FRAME_HEURISTIC = Regex("""(?m)^\s*at\s+.+""")
-private const val ANALYZE_STACK_TRACE_ACTION_ID = "Unscramble"
+private val stackFramePattern = Regex("""(?im)^\s*at\s+\S.+""")
 
 class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManager.ContentChangedListener {
 
@@ -33,8 +38,8 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
         inspectAndOpenIfStackTrace(readText(newTransferable))
     }
 
-    fun inspectSystemClipboardOnIdeActivation() {
-        inspectAndOpenIfStackTrace(readSystemClipboardText())
+    fun inspectSystemClipboard() {
+        inspectAndOpenIfStackTrace(readTextFromSystemClipboard())
     }
 
     private fun inspectAndOpenIfStackTrace(text: String?) {
@@ -48,7 +53,7 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
         ApplicationManager.getApplication().invokeLater {
             try {
                 if (!project.isDisposed) {
-                    triggerAnalyzeStackTrace()
+                    openStackTraceExplorer(text)
                 }
             } finally {
                 actionPending.set(false)
@@ -57,11 +62,11 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
     }
 
     private fun looksLikeStackTrace(text: String): Boolean =
-        text.length <= 1_000_000 &&
-            STACK_TRACE_HEURISTIC.containsMatchIn(text) &&
-            STACK_FRAME_HEURISTIC.containsMatchIn(text)
+        text.length <= MAX_CLIPBOARD_TEXT_LENGTH &&
+            exceptionHeaderPattern.containsMatchIn(text) &&
+            stackFramePattern.containsMatchIn(text)
 
-    private fun readSystemClipboardText(): String? =
+    private fun readTextFromSystemClipboard(): String? =
         try {
             val clipboard = Toolkit.getDefaultToolkit().systemClipboard
             readText(clipboard.getContents(null))
@@ -78,17 +83,15 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
             null
         }
 
-    private fun triggerAnalyzeStackTrace() {
+    private fun openStackTraceExplorer(stackTrace: String) {
         val action = ActionManager.getInstance().getAction(ANALYZE_STACK_TRACE_ACTION_ID) ?: return
-        val dataContext = SimpleDataContext.getProjectContext(project)
+        val stackTraceKey = DataKey.create<String>(CURRENT_STACK_TRACE_DATA_KEY_NAME)
+        val dataContext = SimpleDataContext.builder()
+            .add(CommonDataKeys.PROJECT, project)
+            .add(stackTraceKey, stackTrace)
+            .build()
 
-        ActionUtil.invokeAction(
-            action,
-            dataContext,
-            ActionPlaces.UNKNOWN,
-            null,
-            null
-        )
+        ActionUtil.invokeAction(action, dataContext, ActionPlaces.UNKNOWN, null, null)
     }
 }
 
@@ -99,25 +102,43 @@ class ClipboardStackTraceWatcherStarter : ProjectActivity {
 
         CopyPasteManager.getInstance().addContentChangedListener(watcher, project)
 
-        val connection: MessageBusConnection = project.messageBus.connect(project)
-        connection.subscribe(
-            ApplicationActivationListener.TOPIC,
-            object : ApplicationActivationListener {
-                override fun applicationActivated(ideFrame: IdeFrame) {
-                    if (ideFrame.project != project || !isIdeWindowFocused()) return
-
-                    ApplicationManager.getApplication().invokeLater {
-                        watcher.inspectSystemClipboardOnIdeActivation()
+        ApplicationManager.getApplication().messageBus
+            .connect(project)
+            .subscribe(
+                ApplicationActivationListener.TOPIC,
+                object : ApplicationActivationListener {
+                    override fun applicationActivated(ideFrame: IdeFrame) {
+                        if (!project.isDisposed) {
+                            ApplicationManager.getApplication().invokeLater {
+                                watcher.inspectSystemClipboard()
+                            }
+                        }
                     }
                 }
-            }
-        )
+            )
+
+        registerSystemClipboardListener(watcher, project)
 
         ApplicationManager.getApplication().invokeLater {
-            watcher.inspectSystemClipboardOnIdeActivation()
+            watcher.inspectSystemClipboard()
         }
     }
 
-    private fun isIdeWindowFocused(): Boolean =
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow != null
+    private fun registerSystemClipboardListener(watcher: ClipboardStackTraceWatcher, project: Project) {
+        try {
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            val listener = FlavorListener {
+                ApplicationManager.getApplication().invokeLater {
+                    watcher.inspectSystemClipboard()
+                }
+            }
+
+            clipboard.addFlavorListener(listener)
+            Disposer.register(project) {
+                clipboard.removeFlavorListener(listener)
+            }
+        } catch (_: Exception) {
+            // The activation listener still covers Alt+Tab into Rider if clipboard notifications are unavailable.
+        }
+    }
 }
