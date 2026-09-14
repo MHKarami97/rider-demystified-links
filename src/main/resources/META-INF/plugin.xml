@@ -1,0 +1,23 @@
+<!--
+  Registers the console filter so it applies to Run/Debug/Terminal output in Rider.
+  Docs: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html
+-->
+<idea-plugin>
+    <id>com.mhkarami.rider-demystified-links</id>
+    <name>Demystified Stack Trace Links</name>
+    <vendor email="contact@mhkarami97.ir" url="https://mhkarami97.ir">Mohammad Hossein Karami</vendor>
+    <description><![CDATA[
+        Makes file:line fragments inside Ben.Demystifier-formatted (Serilog
+        WithDemystifiedStackTraces) exception frames clickable in Rider's
+        Run/Debug/Terminal console, even though the surrounding method
+        signature does not match the built-in Stack Trace Explorer grammar.
+    ]]></description>
+
+    <!-- Rider (and any IntelliJ Platform IDE) as the host -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <consoleFilterProvider
+            implementation="com.mhkarami.riderdemystifiedlinks.DemystifiedStackTraceFilterProvider"/>
+    </extensions>
+</idea-plugin>
