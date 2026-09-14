@@ -1,3 +1,6 @@
+# Builds the plugin and uploads the resulting zip as an artifact.
+# Run manually from the "Actions" tab in GitHub.
+
 name: Build Plugin
 
 on:

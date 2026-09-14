@@ -1,3 +1,12 @@
+<!--
+  NOTE ON MARKETPLACE METADATA:
+  The <description>, <change-notes>, and <vendor> elements below are what
+  JetBrains Marketplace automatically extracts and displays on the plugin's
+  page and in the Plugin Manager UI. Edit THESE tags to update the listing
+  text there is no separate "description box" to fill in on the website
+  for a Gradle-published plugin. See:
+  https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html
+-->
 <idea-plugin url="https://mhkarami97.ir">
     <id>com.mhkarami.rider-demystified-links</id>
     <name>Demystified Stack Trace Links</name>
@@ -9,15 +18,21 @@
         clickable in Rider's Run/Debug/Terminal console, even when the
         surrounding method signature does not match the built-in Stack Trace
         Explorer grammar.</p>
-        <p>Instead of parsing the full demystified signature (async return
-        types, compiler-generated <code>&lt;&gt;c__DisplayClass</code> names,
-        local-function syntax), the plugin looks for the
-        <code>in &lt;path&gt;:line &lt;N&gt;</code> fragment that survives
-        demystification and turns it into a navigable link, resolved by file
-        name against the currently open solution.</p>
+        <p>Also watches the clipboard and automatically opens Rider's
+        Stacktrace window (Tools | Analyze Stack Trace or Thread Dump) as
+        soon as something that looks like an exception stack trace is
+        copied -- Rider does not do this on its own.</p>
     ]]></description>
 
     <change-notes><![CDATA[
+        <p><b>1.1.0</b></p>
+        <ul>
+            <li>New: automatically opens the Stacktrace window when a stack
+            trace is detected on the clipboard, mirroring the manual
+            Tools | Analyze Stack Trace or Thread Dump action.</li>
+            <li>Plugin now stays compatible with future Rider versions
+            (no explicit untilBuild upper bound).</li>
+        </ul>
         <p><b>1.0.0</b></p>
         <ul>
             <li>Initial release: recognizes .cs/.vb/.fs "in file:line N" fragments
@@ -31,5 +46,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <consoleFilterProvider
             implementation="com.mhkarami.riderdemystifiedlinks.DemystifiedStackTraceFilterProvider"/>
+        <postStartupActivity
+            implementation="com.mhkarami.riderdemystifiedlinks.ClipboardStackTraceWatcherStarter"/>
     </extensions>
 </idea-plugin>

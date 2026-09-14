@@ -32,7 +32,9 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set(providers.gradleProperty("pluginSinceBuild"))
-        untilBuild.set(providers.gradleProperty("pluginUntilBuild"))
+        // Left unset intentionally: keeps the plugin compatible with future
+        // Rider versions since no internal/unstable APIs are used.
+        untilBuild.set(provider { null })
     }
 
     signPlugin {

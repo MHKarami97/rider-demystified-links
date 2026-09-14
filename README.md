@@ -2,67 +2,48 @@
 
 ## این افزونه چیست؟
 
-این افزونه یک مشکل مشخص در JetBrains Rider را حل می‌کند: وقتی از `Serilog.Enrichers.Demystifier`
-(یعنی گزینه‌ی `WithDemystifiedStackTraces` در تنظیمات Serilog) استفاده می‌کنید، فرمت استک‌تریس‌های
-چاپ‌شده در کنسول با گرامر استانداردی که Stack Trace Explorer داخلی Rider می‌شناسد فرق می‌کند
-(مثلاً پیشوند نوع بازگشتی `async Task<...>` قبل از نام متد، نام‌گذاری‌های
-`+<>c__DisplayClass...g__Method|0(?)` برای closure/local function، و پسوند تکرار فریم `x N`).
-در نتیجه این خطوط در پنجره‌های Run/Debug/Terminal دیگر کلیک‌پذیر نیستند.
+این افزونه دو مشکل جدا اما مرتبط رو در JetBrains Rider حل می‌کنه، هر دو ناشی از استفاده از
+`Serilog.Enrichers.Demystifier` (گزینه‌ی `WithDemystifiedStackTraces` در Serilog):
 
-این افزونه یک `ConsoleFilter` سبک اضافه می‌کند که به‌جای تلاش برای فهمیدن کل امضای پیچیده‌ی متد،
-فقط دنبال بخش `in <path>:line <N>` می‌گردد — بخشی که در فریم‌های دمیستیفای‌شده هم دست‌نخورده باقی
-می‌ماند — و همان بخش را به یک لینک قابل کلیک برای پرش به فایل و خط مربوطه تبدیل می‌کند.
+1. **کلیک‌ناپذیر بودن فریم‌های استک‌تریس در کنسول Run/Debug/Terminal**: فرمت Demystifier
+   (پیشوند نوع بازگشتی `async Task<...>`، نام‌گذاری `+<>c__DisplayClass...g__Method|0(?)`،
+   پسوند تکرار فریم `x N`) با گرامر استانداردی که فیلتر داخلی Rider برای این کنسول‌ها استفاده
+   می‌کنه فرق داره، پس این خطوط لینک نمی‌شن.
+2. **باز نشدن خودکار پنجره‌ی Stacktrace هنگام کپی لاگ**: بر خلاف IntelliJ IDEA، Rider هیچ
+   قابلیت مستندی برای اسکن خودکار کلیپ‌بورد نداره؛ پنجره‌ی Analyze Stack Trace همیشه باید
+   دستی (از منوی Tools) باز بشه.
 
-## چگونه کار می‌کند؟
+نکته‌ی جالب: وقتی همون لاگ رو **دستی** در پنجره‌ی Stack Trace Explorer پیست کنید، Rider خودش
+فرمت Demystifier رو درست می‌فهمه و لینک‌ها کار می‌کنن — یعنی پارسر آن پنجره از پارسر کنسول
+Run/Debug قوی‌تره. پس مشکل ۱ فقط مخصوص کنسول زنده‌ست، و مشکل ۲ (باز نشدن خودکار) یک قابلیت
+جداست که اصلاً وجود نداره و باید از صفر ساخته بشه.
 
-1. **`DemystifiedStackTraceFilterProvider`**: از extension point رسمی
-   `com.intellij.consoleFilterProvider` استفاده می‌کند تا فیلتر را به تمام کنسول‌های
-   Run / Debug / Terminal اضافه کند.
-2. **`DemystifiedStackTraceFilter`**: هر خط از خروجی کنسول را با یک عبارت باقاعده بررسی می‌کند:
+## دو بخش افزونه
 
-   ```
-   in\s+[^\s:]*?([A-Za-z0-9_.\-]+\.(?:cs|vb|fs)):line\s+(\d+)
-   ```
+### ۱. `DemystifiedStackTraceFilter` — کلیک‌پذیر کردن کنسول زنده
 
-3. چون مسیر داخل لاگ معمولاً مسیر مطلق سرور CI است (مثلاً `D:/ag/WCA9/_w/757/s/...`) و روی
-   ماشین شما وجود ندارد، افزونه از مسیر مطلق صرف‌نظر می‌کند و فقط **نام فایل** استخراج‌شده را
-   با استفاده از `FilenameIndex` داخل سالوشن بازِ فعلی جست‌وجو می‌کند.
-4. اگر فایل پیدا شود، یک `OpenFileHyperlinkInfo` روی همان بازه از متن ساخته می‌شود که با کلیک،
-   فایل را باز کرده و به شماره خط موردنظر می‌پرد.
+یک `ConsoleFilter` سبک که به‌جای تلاش برای فهمیدن کل امضای پیچیده‌ی متد، فقط دنبال بخش
+`in <path>:line <N>` می‌گردد و همان بخش را کلیک‌پذیر می‌کند:
 
-## اطلاعات نمایشی افزونه در Marketplace (توضیحات، آیکون، ...)
+```
+in\s+[^\s:]*?([A-Za-z0-9_.\-]+\.(?:cs|vb|fs)):line\s+(\d+)
+```
 
-Marketplace هیچ فیلد جداگانه‌ای برای «توضیحات» یا «یادداشت انتشار» روی خودِ سایت ندارد؛ همه‌ی این
-موارد مستقیماً از داخل `src/main/resources/META-INF/plugin.xml` خوانده می‌شوند:
+چون مسیر داخل لاگ معمولاً مسیر مطلق سرور CI است، افزونه فقط از روی **نام فایل** آن را در
+سالوشن باز جست‌وجو می‌کند (نه از روی مسیر مطلق).
 
-| فیلد نمایشی | تگ در plugin.xml |
-|---|---|
-| توضیحات کامل افزونه | `<description>` |
-| یادداشت هر نسخه (Changelog) | `<change-notes>` |
-| نام و لینک/ایمیل سازنده | `<vendor url="..." email="...">` |
-| لینک وب‌سایت افزونه | صفت `url` روی خودِ تگ `<idea-plugin>` |
-| آیکون (لوگو) افزونه | `pluginIcon.svg` و `pluginIcon_dark.svg` در همان پوشه‌ی META-INF |
+### ۲. `ClipboardStackTraceWatcher` — باز کردن خودکار پنجره‌ی Stacktrace
 
-برای تغییر توضیحات یا نسخه‌ی جدید، فقط کافیست همین تگ‌ها را در `plugin.xml` ویرایش کنید و دوباره
-`buildPlugin`/`publishPlugin` بزنید؛ نیازی به وارد کردن دستی متن در فرم سایت نیست، چون هنگام
-آپلود zip این مقادیر به‌طور خودکار استخراج و روی صفحه‌ی افزونه نمایش داده می‌شوند.
+یک شنونده‌ی کلیپ‌بورد (`CopyPasteManager.ContentsChangedListener`) که هر بار محتوای کلیپ‌بورد
+تغییر می‌کند، بررسی می‌کند آیا متن شامل کلمه‌ی `Exception` و حداقل یک خط با شروع `at ` هست یا
+نه (همون هیوریستیک شل و کلی‌ای که خودِ IntelliJ IDEA هم استفاده می‌کنه). اگر تشخیص داد، اکشن
+داخلی رایدر با آی‌دی `Unscramble` (همون اکشن پشت `Tools | Analyze Stack Trace or Thread Dump`)
+رو به‌صورت برنامه‌نویسی‌شده فراخوانی می‌کند تا پنجره‌ی Stacktrace خودکار باز بشه.
 
-قوانین آیکون:
-
-- دقیقاً **۴۰×۴۰ پیکسل**، فرمت SVG (نه PNG/JPG)، ترجیحاً زیر ۲ تا ۳ کیلوبایت.
-- فایل `pluginIcon.svg` برای تم روشن و `pluginIcon_dark.svg` برای تم تاریک — هر دو باید داخل
-  `src/main/resources/META-INF/` باشند.
-- در همین پروژه یک آیکون نمونه‌ی ساده (یک "زیگزاگ" به‌شکل حرف Z که نماد پرش بین فریم‌های
-  استک‌تریس است) در همین مسیر گذاشته شده؛ می‌توانید آن را با طرح دلخواه خودتان جایگزین کنید.
-
-## محدودیت‌های شناخته‌شده
-
-- اگر چند فایل هم‌نام (مثلاً دو `Extensions.cs` در پروژه‌های مختلف سالوشن) وجود داشته باشد،
-  نسخه‌ی فعلی فقط **اولین نتیجه** را باز می‌کند.
-- فقط پسوندهای `.cs`، `.vb` و `.fs` پشتیبانی می‌شوند؛ برای زبان‌های دیگر باید regex را در
-  `DemystifiedStackTraceFilter.kt` گسترش دهید.
-- این افزونه صرفاً بخش front-end (IntelliJ Platform / JVM) را پوشش می‌دهد و نیازی به
-  ReSharper .NET SDK ندارد.
+**نکته‌ی مهم درباره‌ی این بخش**: چون هیوریستیک عمداً شل هست (برای این‌که فرمت Demystifier رو
+هم بگیره)، هر متنی که کلمه‌ی `Exception` و یک خط شبیه `at ...` داشته باشه رو تشخیص می‌ده — even
+اگه از StackOverflow یا یک چت کپی کرده باشید. اگه این رفتار زیادی حساس بود، رجکس
+`STACK_TRACE_HEURISTIC` در `ClipboardStackTraceWatcher.kt` رو سخت‌گیرانه‌تر کنید.
 
 ## ساختار پروژه
 
@@ -73,21 +54,42 @@ rider-demystified-links/
 ├── gradle.properties
 ├── README.md                 <- همین فایل
 ├── BUILD_AND_PUBLISH.md      <- راهنمای بیلد، اجرا و انتشار
+├── .github/workflows/build.yml <- بیلد ابری با GitHub Actions
 └── src/main/
     ├── kotlin/com/mhkarami/riderdemystifiedlinks/
-    │   └── DemystifiedStackTraceFilter.kt
+    │   ├── DemystifiedStackTraceFilter.kt
+    │   └── ClipboardStackTraceWatcher.kt
     └── resources/META-INF/
         ├── plugin.xml
         ├── pluginIcon.svg
         └── pluginIcon_dark.svg
 ```
 
+## اطلاعات نمایشی افزونه در Marketplace
+
+همه‌چیز (توضیحات، یادداشت انتشار، سازنده) از داخل `plugin.xml` خونده می‌شه، نه از یک فرم جدا
+روی سایت:
+
+| فیلد نمایشی | تگ در plugin.xml |
+|---|---|
+| توضیحات کامل | `<description>` |
+| یادداشت هر نسخه | `<change-notes>` |
+| نام/ایمیل/لینک سازنده | `<vendor url="..." email="...">` |
+| آیکون | `pluginIcon.svg` / `pluginIcon_dark.svg` (دقیقاً ۴۰×۴۰، فرمت SVG) |
+
+## محدودیت‌های شناخته‌شده
+
+- اگر چند فایل هم‌نام در سالوشن باشد، فیلتر فقط اولین نتیجه را باز می‌کند.
+- فقط پسوندهای `.cs`، `.vb`، `.fs` پشتیبانی می‌شوند.
+- هیوریستیک تشخیص کلیپ‌بورد ممکن است روی متن‌های غیرمرتبط هم false-positive بدهد (بالا توضیح
+  داده شد).
+- `pluginUntilBuild` عمداً خالی گذاشته شده تا با نسخه‌های آینده‌ی Rider هم سازگار بماند.
+
 ## منابع رسمی
 
 - [IntelliJ Platform Plugin SDK](https://plugins.jetbrains.com/docs/intellij/welcome.html)
 - [Extension Points](https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html)
-- [Rider Plugin Development](https://plugins.jetbrains.com/docs/intellij/rider.html)
-- [Best Practices for Listing](https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html)
-- [Plugin Icon File](https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html)
+- [Explore and navigate exception stack traces (Rider)](https://www.jetbrains.com/help/rider/Navigation_and_Search__Navigating_to_Exception.html)
+- [Analyze external stack traces (IntelliJ IDEA)](https://www.jetbrains.com/help/idea/analyzing-external-stacktraces.html)
 - [Ben.Demystifier](https://github.com/benaadams/Ben.Demystifier)
 - [Serilog.Enrichers.Demystifier](https://github.com/nblumhardt/serilog-enrichers-demystify)
