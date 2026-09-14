@@ -30,6 +30,31 @@
 4. اگر فایل پیدا شود، یک `OpenFileHyperlinkInfo` روی همان بازه از متن ساخته می‌شود که با کلیک،
    فایل را باز کرده و به شماره خط موردنظر می‌پرد.
 
+## اطلاعات نمایشی افزونه در Marketplace (توضیحات، آیکون، ...)
+
+Marketplace هیچ فیلد جداگانه‌ای برای «توضیحات» یا «یادداشت انتشار» روی خودِ سایت ندارد؛ همه‌ی این
+موارد مستقیماً از داخل `src/main/resources/META-INF/plugin.xml` خوانده می‌شوند:
+
+| فیلد نمایشی | تگ در plugin.xml |
+|---|---|
+| توضیحات کامل افزونه | `<description>` |
+| یادداشت هر نسخه (Changelog) | `<change-notes>` |
+| نام و لینک/ایمیل سازنده | `<vendor url="..." email="...">` |
+| لینک وب‌سایت افزونه | صفت `url` روی خودِ تگ `<idea-plugin>` |
+| آیکون (لوگو) افزونه | `pluginIcon.svg` و `pluginIcon_dark.svg` در همان پوشه‌ی META-INF |
+
+برای تغییر توضیحات یا نسخه‌ی جدید، فقط کافیست همین تگ‌ها را در `plugin.xml` ویرایش کنید و دوباره
+`buildPlugin`/`publishPlugin` بزنید؛ نیازی به وارد کردن دستی متن در فرم سایت نیست، چون هنگام
+آپلود zip این مقادیر به‌طور خودکار استخراج و روی صفحه‌ی افزونه نمایش داده می‌شوند.
+
+قوانین آیکون:
+
+- دقیقاً **۴۰×۴۰ پیکسل**، فرمت SVG (نه PNG/JPG)، ترجیحاً زیر ۲ تا ۳ کیلوبایت.
+- فایل `pluginIcon.svg` برای تم روشن و `pluginIcon_dark.svg` برای تم تاریک — هر دو باید داخل
+  `src/main/resources/META-INF/` باشند.
+- در همین پروژه یک آیکون نمونه‌ی ساده (یک "زیگزاگ" به‌شکل حرف Z که نماد پرش بین فریم‌های
+  استک‌تریس است) در همین مسیر گذاشته شده؛ می‌توانید آن را با طرح دلخواه خودتان جایگزین کنید.
+
 ## محدودیت‌های شناخته‌شده
 
 - اگر چند فایل هم‌نام (مثلاً دو `Extensions.cs` در پروژه‌های مختلف سالوشن) وجود داشته باشد،
@@ -52,7 +77,9 @@ rider-demystified-links/
     ├── kotlin/com/mhkarami/riderdemystifiedlinks/
     │   └── DemystifiedStackTraceFilter.kt
     └── resources/META-INF/
-        └── plugin.xml
+        ├── plugin.xml
+        ├── pluginIcon.svg
+        └── pluginIcon_dark.svg
 ```
 
 ## منابع رسمی
@@ -60,5 +87,7 @@ rider-demystified-links/
 - [IntelliJ Platform Plugin SDK](https://plugins.jetbrains.com/docs/intellij/welcome.html)
 - [Extension Points](https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html)
 - [Rider Plugin Development](https://plugins.jetbrains.com/docs/intellij/rider.html)
+- [Best Practices for Listing](https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html)
+- [Plugin Icon File](https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html)
 - [Ben.Demystifier](https://github.com/benaadams/Ben.Demystifier)
 - [Serilog.Enrichers.Demystifier](https://github.com/nblumhardt/serilog-enrichers-demystify)

@@ -1,17 +1,29 @@
-<!--
-  Registers the console filter so it applies to Run/Debug/Terminal output in Rider.
-  Docs: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html
--->
-<idea-plugin>
+<idea-plugin url="https://mhkarami97.ir">
     <id>com.mhkarami.rider-demystified-links</id>
     <name>Demystified Stack Trace Links</name>
     <vendor email="contact@mhkarami97.ir" url="https://mhkarami97.ir">Mohammad Hossein Karami</vendor>
+
     <description><![CDATA[
-        Makes file:line fragments inside Ben.Demystifier-formatted (Serilog
-        WithDemystifiedStackTraces) exception frames clickable in Rider's
-        Run/Debug/Terminal console, even though the surrounding method
-        signature does not match the built-in Stack Trace Explorer grammar.
+        <p>Makes file:line fragments inside <b>Ben.Demystifier</b>-formatted
+        (Serilog <code>WithDemystifiedStackTraces</code>) exception frames
+        clickable in Rider's Run/Debug/Terminal console, even when the
+        surrounding method signature does not match the built-in Stack Trace
+        Explorer grammar.</p>
+        <p>Instead of parsing the full demystified signature (async return
+        types, compiler-generated <code>&lt;&gt;c__DisplayClass</code> names,
+        local-function syntax), the plugin looks for the
+        <code>in &lt;path&gt;:line &lt;N&gt;</code> fragment that survives
+        demystification and turns it into a navigable link, resolved by file
+        name against the currently open solution.</p>
     ]]></description>
+
+    <change-notes><![CDATA[
+        <p><b>1.0.0</b></p>
+        <ul>
+            <li>Initial release: recognizes .cs/.vb/.fs "in file:line N" fragments
+            inside demystified stack traces printed to Run/Debug/Terminal consoles.</li>
+        </ul>
+    ]]></change-notes>
 
     <!-- Rider (and any IntelliJ Platform IDE) as the host -->
     <depends>com.intellij.modules.platform</depends>
