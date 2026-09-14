@@ -14,6 +14,10 @@ repositories {
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin
+// NOTE: Gradle IntelliJ Plugin 1.x prints a warning when building against
+// IntelliJ Platform 2024.2+ ("242+"), recommending a migration to the
+// IntelliJ Platform Gradle Plugin 2.x. This is advisory only and does not
+// fail the build; migrate later if you hit an actual incompatibility.
 intellij {
     // platformType = RD -> builds/tests against Rider itself instead of IntelliJ IDEA.
     // Requires Rider to be installed locally, or it will be downloaded automatically.

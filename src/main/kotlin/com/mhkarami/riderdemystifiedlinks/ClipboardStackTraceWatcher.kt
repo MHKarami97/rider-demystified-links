@@ -37,7 +37,7 @@ import java.awt.datatransfer.Transferable
 private val STACK_TRACE_HEURISTIC = Regex("""Exception[\s\S]*?\n\s*at\s+\S""")
 private const val ANALYZE_STACK_TRACE_ACTION_ID = "Unscramble"
 
-class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManager.ContentsChangedListener {
+class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManager.ContentChangedListener {
 
     private var lastHandledText: String? = null
 
