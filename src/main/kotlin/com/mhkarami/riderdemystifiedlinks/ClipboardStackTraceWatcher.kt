@@ -63,7 +63,8 @@ class ClipboardStackTraceWatcher(private val project: Project) : CopyPasteManage
 
     private fun readSystemClipboardText(): String? =
         try {
-            readText(Toolkit.getDefaultToolkit().systemClipboard.contents)
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            readText(clipboard.getContents(null))
         } catch (_: Exception) {
             null
         }
